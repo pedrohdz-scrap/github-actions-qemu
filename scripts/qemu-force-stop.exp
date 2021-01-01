@@ -1,0 +1,19 @@
+#! /usr/bin/env -S expect -f
+
+source [file join [file dirname [info script]] "common.exp"]
+
+set monitor_prompt "\(qemu\)"
+
+spawn gtelnet 127.0.0.1 $VM_MONITOR_PORT
+
+send "\n\n"
+expect {
+  -re $monitor_prompt { send "quit\n" }
+  timeout { critical "Timed out waiting for the QEMU monitor prompt" }
+}
+
+expect {
+  -timeout 600 eof { warn "Forced QEMU machine to quit" }
+  timeout { critical "Failed toforce quit the QEMU machine" }
+}
+catch wait result

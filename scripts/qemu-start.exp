@@ -1,0 +1,46 @@
+#! /usr/bin/env -S expect -f
+
+source [file join [file dirname [info script]] "common.exp"]
+
+
+#------------------------------------------------------------------------------
+# QEMU machine running in the background
+#------------------------------------------------------------------------------
+spawn -ignore HUP qemu-system-arm \
+  -kernel $KERNEL_FILE \
+  -dtb $DTB_FILE \
+  -drive "file=$FILESYSTEM_IMAGE_FILE,index=0,media=disk,format=raw" \
+  -cpu arm1176 \
+  -display none \
+  -serial telnet:127.0.0.1:$VM_CONSOLE_PORT,server \
+  -monitor telnet:127.0.0.1:$VM_MONITOR_PORT,server,nowait \
+  -m 256 \
+  -audiodev none,id=none,driver=none \
+  -machine versatilepb \
+  -no-reboot \
+  -append "root=/dev/sda2 panic=1 rootfstype=ext4 rw" \
+  -net user,hostfwd=tcp:127.0.0.1:$VM_SSH_PORT-:22 \
+  -net nic
+
+expect {
+  # Backgrounds the QEMU process by using `spawn -ignore HUP` and the `close`
+  # below.
+  "QEMU waiting for connection on" { sleep 1; close }
+  timeout { critical "Startup failed" }
+}
+
+
+#------------------------------------------------------------------------------
+# Connect to QEMU machine via console (telnet)
+#------------------------------------------------------------------------------
+spawn $TELNET 127.0.0.1 $VM_CONSOLE_PORT
+
+expect {
+  -timeout 600 "login: " {
+    info "Waiting 10 seconds for the system to settle..."
+    sleep 10
+  }
+  timeout { critical "Boot up timed out" }
+}
+
+disconnect_telnet

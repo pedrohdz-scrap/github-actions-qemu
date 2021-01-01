@@ -1,0 +1,22 @@
+#! /usr/bin/env -S expect -f
+
+source [file join [file dirname [info script]] "common.exp"]
+
+
+#------------------------------------------------------------------------------
+# Shutdown
+#------------------------------------------------------------------------------
+spawn $TELNET 127.0.0.1 $VM_CONSOLE_PORT
+console_login "$TEST_USER" "$TEST_PASSWORD"
+
+expect {
+  -re $SHELL_PROMPT { send "sudo halt\n" }
+  timeout { critical "Failed to get a prompt to halt the machine" }
+}
+
+expect {
+  -timeout 600 eof { info "QEMU machine halted" }
+  timeout { critical "Halting machine timed out" }
+}
+
+catch wait result

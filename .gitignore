@@ -1,6 +1,6 @@
 
-# Created by https://www.toptal.com/developers/gitignore/api/vim,emacs,macos,linux,windows,helm,venv,python
-# Edit at https://www.toptal.com/developers/gitignore?templates=vim,emacs,macos,linux,windows,helm,venv,python
+# Created by https://www.toptal.com/developers/gitignore/api/vim,emacs,macos,linux,windows,helm,python
+# Edit at https://www.toptal.com/developers/gitignore?templates=vim,emacs,macos,linux,windows,helm,python
 
 ### Emacs ###
 # -*- mode: gitignore; -*-
@@ -238,18 +238,6 @@ dmypy.json
 # profiling data
 .prof
 
-### venv ###
-# Virtualenv
-# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
-[Bb]in
-[Ii]nclude
-[Ll]ib
-[Ll]ib64
-[Ll]ocal
-[Ss]cripts
-pyvenv.cfg
-pip-selfcheck.json
-
 ### Vim ###
 # Swap
 [._]*.s[a-v][a-z]
@@ -296,6 +284,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.toptal.com/developers/gitignore/api/vim,emacs,macos,linux,windows,helm,venv,python
+# End of https://www.toptal.com/developers/gitignore/api/vim,emacs,macos,linux,windows,helm,python
 
 # Generated using ignr.py - github.com/Antrikshy/ignr.py
+
+/.cache/

@@ -1,0 +1,108 @@
+#! /usr/bin/env -S expect -f
+
+source [file join [file dirname [info script]] "common.exp"]
+
+
+#------------------------------------------------------------------------------
+# Helper functions
+#------------------------------------------------------------------------------
+proc abort {args} {
+  global SHELL_PROMPT
+  error "Aborting: $args\n"
+  send "\n\n"
+  sleep 1
+  expect {
+    -re $SHELL_PROMPT { send "exit\n"; sleep 1 }
+    timeout { error "Failed to get shell prompt to exit and abort" }
+  }
+  disconnect_telnet
+  exit 1
+}
+
+
+#------------------------------------------------------------------------------
+# Initialize system
+#------------------------------------------------------------------------------
+spawn $TELNET 127.0.0.1 $VM_CONSOLE_PORT
+console_login "pi" "raspberry"
+
+#----
+# create user
+set password_hash [eval exec openssl passwd -5 $TEST_PASSWORD]
+expect {
+  -re $SHELL_PROMPT { send "sudo useradd --comment 'CI test account' --shell /bin/bash --password '$password_hash' --create-home '$TEST_USER'\n" }
+  timeout { abort "Failed to create CI test user" }
+}
+expect {
+  -re $SHELL_PROMPT {
+    send "grep --color=never $TEST_USER /etc/passwd\n"
+    expect {
+      "$TEST_USER:x:" {}
+      timeout { abort "CI test user was not created" }
+    }
+  }
+  timeout { abort "Failed to to check for CI test user" }
+}
+
+#----
+# give user sudo
+expect {
+  -re $SHELL_PROMPT { send "echo '$TEST_USER ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/$TEST_USER\n" }
+  timeout { abort "Failed to add user to sudoers" }
+}
+expect {
+  -re $SHELL_PROMPT { send "sudo chmod 0440 /etc/sudoers.d/$TEST_USER\n" }
+  timeout { abort "Failed to set sudoers permissions" }
+}
+expect {
+  -re $SHELL_PROMPT {
+    send "sudo cat /etc/sudoers.d/$TEST_USER\n"
+    expect {
+      "$TEST_USER ALL=" {}
+      timeout { abort "Sudoers not set correctly" }
+    }
+  }
+  timeout { abort "Failed to fetch sudoers" }
+}
+
+#----
+# start sshd
+expect {
+  -re $SHELL_PROMPT {
+    send "sudo systemctl --no-pager enable ssh.service\n"
+    expect {
+      -timeout 120 -re $SHELL_PROMPT { send "\n" }
+      timeout { abort "Timed out waiting to enable sshd" }
+    }
+  }
+  timeout { abort "Cannot enable sshd" }
+}
+
+expect {
+  -re $SHELL_PROMPT { send "sudo systemctl --no-pager restart ssh.service\n" }
+  timeout { abort "Cannot restart sshd" }
+}
+
+expect {
+  -re $SHELL_PROMPT {
+    send "sudo systemctl --no-pager status ssh.service\n"
+    expect {
+      "active (running)" {}
+      timeout { abort "sshd does not seem to be running" }
+    }
+  }
+  timeout { abort "Cannot check sshd status" }
+}
+
+#----
+# logout
+expect {
+  -re $SHELL_PROMPT { send "exit\n" }
+  timeout { abort "Cannot logout" }
+}
+expect {
+  "login: " {}
+  timeout { abort "Logout failed" }
+}
+
+disconnect_telnet

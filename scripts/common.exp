@@ -1,0 +1,69 @@
+#! /usr/bin/env -S expect -f
+
+set PROJECT_DIR [file normalize [file join [file dirname [info script]] ".."]]
+
+set ESC_SEQ "echo 'e' | tr 'e' '\035'"
+set SHELL_PROMPT "(%|#|\\$) $"
+set TELNET [expr {$tcl_platform(os) eq "Darwin" ? "gtelnet" : "telnet"}]
+set TEST_PASSWORD "tester1234"
+set TEST_USER "tester"
+set VM_CONSOLE_PORT 5023
+set VM_MONITOR_PORT 5024
+set VM_SSH_PORT 5022
+
+set DTB_FILE [file join $PROJECT_DIR "build" "dtb"]
+set FILESYSTEM_IMAGE_FILE [file join $PROJECT_DIR "build" "filesystem.img"]
+set KERNEL_FILE [file join $PROJECT_DIR "build" "kernel"]
+
+catch { [set DTB_FILE $env(RASPI_DTB_FILE)] } value
+catch { [set FILESYSTEM_IMAGE_FILE $env(RASPI_FILESYSTEM_IMAGE_FILE)] } value
+catch { [set KERNEL_FILE $env(RASPI_KERNEL_FILE)] } value
+
+
+proc info {args} {
+  send_user "\nEXPECT INFO - $args\n"
+}
+
+proc warn {args} {
+  send_user "\nEXPECT WARN - $args\n"
+}
+
+proc error {args} {
+  send_user "\nEXPECT ERROR - $args\n"
+}
+
+proc critical {args} {
+  send_user "\nEXPECT CRITICAL - $args\n"
+  exit 2
+}
+
+proc disconnect_telnet {} {
+  global ESC_SEQ
+  send "$ESC_SEQ"
+  expect {
+    "telnet> " { send "quit\n" }
+    timeout { critical "Telnet control mode timed out" }
+  }
+  expect {
+    eof { info "Telnet disconnected, QEMU will remain running in the background..." }
+    timeout { critical "Failed to disconnect telnet session" }
+  }
+  catch wait result
+}
+
+proc console_login {username password} {
+  global SHELL_PROMPT
+  send "\n\n"
+  expect {
+    "login: " { send "$username\n" }
+    timeout { critical "Timed out waiting for the login prompt from the console" }
+  }
+  expect {
+    "Password: " { send "$password\n" }
+    timeout { critical "Timed out waiting for the password prompt from the console" }
+  }
+  expect {
+    -re $SHELL_PROMPT { send "\n" }
+    timeout { critical "Failed to get shell prompt from console" }
+  }
+}

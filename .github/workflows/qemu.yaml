@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [create]
+  pull_request:
+    branches: [create]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            .cache
+          key: downloads-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            downloads-
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get --assume-yes --no-show-progress install \
+            expect \
+            qemu-system-arm
+
+      - name: QEMU version
+        run: qemu-system-arm -version
+
+      - name: QEMU machines
+        run: qemu-system-arm -machine help
+
+      - name: QEMU help
+        run: qemu-system-arm -help
+
+      - name: Start
+        run: make qemu-start
+
+      - name: Init
+        run: make qemu-configure
+
+      - name: Stop
+        if: ${{ always() }}
+        run: make qemu-stop
