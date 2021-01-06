@@ -30,21 +30,15 @@ jobs:
             expect \
             qemu-system-arm
 
-      - name: QEMU version
-        run: qemu-system-arm -version
+      - name: Download/cache/copy files
+        run: make copy-cached-files
 
-      - name: QEMU machines
-        run: qemu-system-arm -machine help
-
-      - name: QEMU help
-        run: qemu-system-arm -help
-
-      - name: Start
+      - name: Start machine
         run: make qemu-start
 
-      - name: Init
+      - name: Configure machine
         run: make qemu-configure
 
-      - name: Stop
+      - name: Stop machine
         if: ${{ always() }}
         run: make qemu-stop
